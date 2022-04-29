@@ -1,24 +1,27 @@
-// You can use this skeleton testbench code, the textbook testbench code, or your own
 module MIPS_Testbench ();
-  reg CLK;
+  reg CLK, CLK_2;
+  reg RST;
   wire CS;
   wire WE;
+  reg HALT;
   wire [31:0] Mem_Bus;
   wire [6:0] Address, Address_mux;
   reg [6:0] Address_TB;
   reg [31:0] expected [10:1];
-  wire [1:0] swi;
   wire WE_mux, CS_mux;
   reg init, WE_TB, CS_TB;
-  wire btnR;
-  reg [3:0] an;
-  reg [6:0] sseg;
+  reg [2:0] swi;
+  reg btnR;
+  wire [3:0] an;
+  wire [6:0] sseg;
+  wire [6:0] in0, in1, in2, in3;
 
 integer i;
-
   initial
   begin
+    HALT = 0;
     CLK = 0;
+    CLK_2 = 0;
     expected[1] = 32'h00000006;
     expected[2] = 32'h12;
     expected[3] = 32'h18;
@@ -38,17 +41,19 @@ assign Address_mux = (init)? Address_TB : Address;
 assign WE_mux = (init)? WE_TB : WE;
 assign CS_mux = (init)? CS_TB : CS;
 
-  MIPS CPU(.CLK(CLK), .swi(swi), .CS(CS), .WE(WE), .ADDR(Address), .Mem_Bus(Mem_Bus),.an(an),.sseg(sseg));
+  dispFSM display(.CLK_2(CLK_2),.in0(in0),.in1(in1),.in2(in2),.in3(in3),.an(an),.sseg(sseg));
+  MIPS CPU(.CLK(CLK), .swi(swi),.RST(RST), .CS(CS), .WE(WE), .ADDR(Address), .Mem_Bus(Mem_Bus),.in0(in0),.in1(in1),.in2(in2),.in3(in3));
   Memory MEM(.CS(CS_mux), .WE(WE_mux), .CLK(CLK), .ADDR(Address_mux), .Mem_Bus(Mem_Bus));
 
   always
   begin
     #5 CLK = !CLK;
+    #10 CLK_2 = !CLK;
   end
 
   always
   begin
-    //RST = 1'b1; //reset the processor
+    RST = 1'b1; //reset the processor
     //Notice that the memory is initialize in the in the memory module not here
     @(posedge CLK);
     init <= 1;
@@ -60,8 +65,11 @@ assign CS_mux = (init)? CS_TB : CS;
     init <= 0;
     @(posedge CLK);
     // driving reset low here puts processor in normal operating mode
-    //RST = 1'b0;
-
+    RST = 1'b0;
+    btnR = 1'b0;
+    swi = 3'b000;
+    #300;
+    swi = 3'b001;
     for(i = 1; i <= 10; i = i + 1) begin
     @(posedge WE);
     @(negedge CLK);
@@ -84,10 +92,11 @@ endmodule
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-module Complete_MIPS(CLK, swi, btnR, an, sseg);
+module Complete_MIPS(CLK, swi, RST, btnR, an, sseg);
   // Will need to be modified to add functionality
   input CLK;
-  input [1:0] swi;
+  input [2:0] swi;
+  input RST;
   input btnR;
   output [3:0] an;
   output [6:0] sseg;
@@ -105,7 +114,7 @@ module Complete_MIPS(CLK, swi, btnR, an, sseg);
   
   dispFSM display(.CLK_2(CLK_2),.in0(in0),.in1(in1),.in2(in2),.in3(in3),.an(an),.sseg(sseg));
   clk_div slow(.CLK(CLK),.CLK_2(CLK_2));
-  MIPS CPU(.CLK(CLK), .swi(swi), .CS(CS), .WE(WE), .ADDR(ADDR), .Mem_Bus(Mem_Bus),.btnR(btnR),.in0(in0),.in1(in1),.in2(in2),.in3(in3));
+  MIPS CPU(.CLK(CLK), .swi(swi),.RST(RST), .CS(CS), .WE(WE), .ADDR(ADDR), .Mem_Bus(Mem_Bus),.btnR(btnR),.in0(in0),.in1(in1),.in2(in2),.in3(in3));
   Memory MEM(.CS(CS), .WE(WE), .CLK(CLK_2), .ADDR(ADDR), .Mem_Bus(Mem_Bus));
 
 endmodule
@@ -129,7 +138,7 @@ module Memory(CS, WE, CLK, ADDR, Mem_Bus);
 
   initial begin
     /* Write your Verilog-Text IO code here */
-    $readmemh("data.mem",RAM);
+    $readmemh("partb.mem",RAM);
   end
 
   assign Mem_Bus = ((CS == 1'b0) || (WE == 1'b1)) ? 32'bZ : data_out;
@@ -153,7 +162,7 @@ endmodule
 module REG(CLK, RegW, swi, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2,Rout);
   input CLK;
   input RegW;
-  input [1:0] swi;
+  input [2:0] swi;
   input [4:0] DR;
   input [4:0] SR1;
   input [4:0] SR2;
@@ -167,6 +176,9 @@ module REG(CLK, RegW, swi, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2,Rout);
   integer i;
 
   initial begin
+  for(i = 0; i <= 31; i = i + 1) begin
+  REG[i] = 0;
+  end
     Rout = 0;
     ReadReg1 = 0;
     ReadReg2 = 0;
@@ -177,7 +189,7 @@ module REG(CLK, RegW, swi, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2,Rout);
     Rout <= REG[2];
     if(RegW == 1'b1)
       REG[DR] <= Reg_In[31:0];
-    else REG[1] <= swi[1:0];
+    else REG[1] <= swi[2:0];
 
     ReadReg1 <= REG[SR1];
     ReadReg2 <= REG[SR2];
@@ -198,9 +210,10 @@ endmodule
 `define f_code instr[5:0]
 `define numshift instr[10:6]
 
-module MIPS (CLK, swi, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
+module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
   input CLK;
-  input [1:0] swi;
+  input [2:0] swi;
+  input RST;
   output reg CS, WE;
   output [6:0] ADDR;
   inout [31:0] Mem_Bus;
@@ -251,7 +264,7 @@ module MIPS (CLK, swi, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
   reg [2:0] state, nstate;
   reg [15:0] rR2;
   reg [31:0] temp;
-  reg [31:0] Rout;
+  wire [31:0] Rout;
   integer loop;
 
   //combinational
@@ -266,7 +279,7 @@ module MIPS (CLK, swi, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
   assign alu_in_A = readreg1;
   assign alu_in_B = (reg_or_imm_save)? imm_ext : readreg2; //ALU MUX (MUX2)
   assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX
-  assign format = (`opcode == 6'd0)? R : ((`opcode == 6'd2)? J : I);
+  assign format = (`opcode == 6'd0)? R : ((`opcode == 6'd2 || `opcode == 6'd3)? J : I);
   assign Mem_Bus = (writing)? readreg2 : 32'bZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ;
 
   //drive memory bus only during writes
@@ -299,17 +312,16 @@ module MIPS (CLK, swi, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
       1: begin //decode
         nstate = 3'd2; reg_or_imm = 0; alu_or_mem = 0;
         if (format == J) begin //jump, and finish
-        if(instr[0]) begin  //jal
-          alu_result = pc + 7'd1;
-          npc = instr[6:0];
-          nstate = 3'd0;
-        end
-        else begin  //j
-          npc = instr[6:0];
-          nstate = 3'd0;
+        npc = instr[6:0];
+        nstate = 3'd0;
+        if(instr[0]) begin //jal
+        alu_result_save = pc;
+        alu_or_mem_save = 0;
+        regw = 1;
         end
         
         end
+        
         else if (format == R) //register instructions
           op = `f_code;
         else if (format == I) begin //immediate instructions
@@ -333,7 +345,9 @@ module MIPS (CLK, swi, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
       2: begin //execute
         nstate = 3'd3;
         if (opsave == and1) alu_result = alu_in_A & alu_in_B;
-        else if (opsave == or1) alu_result = alu_in_A | alu_in_B;
+        else if (opsave == or1) begin
+        alu_result = alu_in_A | alu_in_B;
+        end
         else if (opsave == add) alu_result = alu_in_A + alu_in_B;
         else if (opsave == sub) alu_result = alu_in_A - alu_in_B;
         else if (opsave == srl) alu_result = alu_in_B >> `numshift;
@@ -353,7 +367,9 @@ module MIPS (CLK, swi, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
         temp[31:24] = alu_in_B[7:0];
         alu_result = temp;
         end
-        else if (opsave == lui) alu_result = (alu_in_B[15:0] << 16);
+        else if (opsave == lui) begin
+        alu_result = (alu_in_B[15:0] << 16);
+        end
         else if (opsave == add8) begin
         alu_result[31:24] = alu_in_A[31:24] + alu_in_B[31:24];
         alu_result[23:16] = alu_in_A[23:16] + alu_in_B[23:16];
@@ -362,15 +378,15 @@ module MIPS (CLK, swi, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
         end
         else if (opsave == sadd) alu_result = ((alu_in_A + alu_in_B < alu_in_A) || (alu_in_A + alu_in_B > alu_in_A)) ? 32'hFFFFFFFF:(alu_in_A + alu_in_B); 
         else if (opsave == ssub) alu_result = (alu_in_A - alu_in_B > alu_in_A) ? 32'h0:(alu_in_A - alu_in_B);
+        else if(opsave == jr && format == R) begin
+          npc = alu_in_A[6:0];
+          nstate = 3'd0;
+          end
         if (((alu_in_A == alu_in_B)&&(`opcode == beq)) || ((alu_in_A != alu_in_B)&&(`opcode == bne))) begin
           npc = pc + imm_ext[6:0];
           nstate = 3'd0;
         end
         else if ((`opcode == bne)||(`opcode == beq)) nstate = 3'd0;
-        else if (opsave == jr) begin
-          npc = alu_in_A[6:0];
-          nstate = 3'd0;
-        end
         
       end
       3: begin //prepare to write to mem
@@ -399,16 +415,16 @@ module MIPS (CLK, swi, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
     rR2 = Rout;
     if(btnR) rR2[15:0] = Rout[31:16];
     else rR2[15:0] = Rout[15:0];
-    /*
+    
     if (RST) begin
       state <= 3'd0;
       pc <= 7'd0;
     end
-    */
-    //else if(~HALT) begin
+    
+    else begin
       state <= nstate;
       pc <= npc;
-    //end
+    end
 
     if (state == 3'd0) instr <= Mem_Bus;
     else if (state == 3'd1) begin
