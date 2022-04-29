@@ -1,0 +1,59 @@
+module lab7b(CLK, R1, btnL, btnR, an, seg);
+input CLK, btnL, btnR;
+input wire [2:0] R1;
+output [3:0] an;
+output [6:0] seg;
+
+reg RST;
+wire [31:0] R2, R3;
+wire CS, WE, dbtnL, dbtnR;
+wire [31:0] Mem_Bus;
+wire [6:0] Address;
+wire [15:0] num;
+wire n_clk, disp_clk, sec_clk, db_clk;
+initial
+begin
+  RST = 0;
+end
+
+MIPS m0(CLK, RST, CS, WE, Address, Mem_Bus, R1, R2, R3);
+Memory m1(CS, WE, CLK, Address, Mem_Bus);
+clk_div dispClk(.clk(CLK), .disp_clk(disp_clk),.sec_clk(sec_clk),.n_clk(n_clk),.db_clk(db_clk)); 
+sseg s0(disp_clk, num, an, seg);
+debounce b0(CLK, n_clk, btnL, dbtnL);
+debounce b1(CLK, n_clk, btnR, dbtnR);
+
+assign num = ((R1 == 0) && dbtnL)? ((dbtnR)? (R3[31:16]) : R3[15:0]) : ((dbtnR)? (R2[31:16]) : R2[15:0]);
+
+endmodule
+
+module debounce(
+    input clk,
+    input slow_clk,
+    input in,
+    output out
+    );
+    wire Q1, Q2;
+    assign out = (Q1 && (~Q2));
+    
+    dflip d0(.clk(slow_clk),.D(in),.Q(Q1));
+    dflip d1(.clk(slow_clk),.D(Q1),.Q(Q2));
+    
+    
+endmodule
+
+
+module dflip(
+    input clk,
+    input D,
+    output reg Q
+    );
+    initial begin
+    Q <= 0;
+    end
+    
+    always @(posedge clk) begin
+    Q <= D;
+    end
+    
+endmodule
