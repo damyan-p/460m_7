@@ -275,7 +275,7 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
   hex_to_sseg c3(.x(Rout[3:0]),.r(in0));
   
   assign imm_ext = (instr[15] == 1)? {16'hFFFF, instr[15:0]} : {16'h0000, instr[15:0]};//Sign extend immediate field
-  assign dr = (format == R)? instr[15:11] : instr[20:16]; //Destination Register MUX (MUX1)
+  assign dr = (format == R)? instr[15:11] : ((format == J)? 5'd31:instr[20:16]); //Destination Register MUX (MUX1)
   assign alu_in_A = readreg1;
   assign alu_in_B = (reg_or_imm_save)? imm_ext : readreg2; //ALU MUX (MUX2)
   assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX
@@ -302,7 +302,11 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
   begin
     
     
-    fetchDorI = 0; CS = 0; WE = 0; regw = 0; writing = 0; alu_result = 32'd0;
+    fetchDorI = 0; CS = 0; WE = 0; regw = 0; writing = 0; 
+    if(format == J && state == 2'd2) begin
+    end
+    else alu_result = 32'd0;
+    
     npc = pc; op = jr; reg_or_imm = 0; alu_or_mem = 0; nstate = 3'd0;
     case (state)
       0: begin //fetch
@@ -314,9 +318,10 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
         if (format == J) begin //jump, and finish
         npc = instr[6:0];
         nstate = 3'd0;
-        if(instr[0]) begin //jal
-        alu_result_save = pc;
-        alu_or_mem_save = 0;
+        if(instr[27]) begin //jal
+        nstate = 3'd2;
+        alu_result = pc;
+        alu_or_mem = 0;
         regw = 1;
         end
         
@@ -384,15 +389,15 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
           end
         if (((alu_in_A == alu_in_B)&&(`opcode == beq)) || ((alu_in_A != alu_in_B)&&(`opcode == bne))) begin
           npc = pc + imm_ext[6:0];
-          nstate = 3'd0;
+          nstate = 3'd3;
         end
         else if ((`opcode == bne)||(`opcode == beq)) nstate = 3'd0;
-        
+
       end
       3: begin //prepare to write to mem
         nstate = 3'd0;
         if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)) regw = 1;
-        else if((format == J) || (instr[0])) regw = 1;
+        else if((format == J) && (instr[0])) regw = 1;
         else if (`opcode == sw) begin
           CS = 1;
           WE = 1;
@@ -432,7 +437,9 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
       reg_or_imm_save <= reg_or_imm;
       alu_or_mem_save <= alu_or_mem;
     end
-    else if (state == 3'd2) alu_result_save <= alu_result;
+    else if (state == 3'd2) begin
+    alu_result_save <= alu_result;
+    end
 
   end //always
 
