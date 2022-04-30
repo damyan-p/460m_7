@@ -133,7 +133,7 @@ module Complete_MIPS(CLK, swi, RST, btnR, an, sseg);
   wire CS, WE;
   wire [6:0] ADDR;
   wire [31:0] Mem_Bus;
-  wire CLK_2;
+  wire CLK_2,CLK_3;
 //  wire [31:0] R2 = 0;
 //    wire [31:0] R3 = 0;
   wire [6:0] in0, in1, in2, in3;
@@ -141,11 +141,10 @@ module Complete_MIPS(CLK, swi, RST, btnR, an, sseg);
 //  initial begin
 //  R2 = 0;
 //  end
-  
+  clk_div slow(.CLK(CLK),.CLK_2(CLK_2),.CLK_3(CLK_3));
   dispFSM display(.CLK_2(CLK_2),.in0(in0),.in1(in1),.in2(in2),.in3(in3),.an(an),.sseg(sseg));
-  clk_div slow(.CLK(CLK),.CLK_2(CLK_2));
-  MIPS CPU(.CLK(CLK), .swi(swi),.RST(RST), .CS(CS), .WE(WE), .ADDR(ADDR), .Mem_Bus(Mem_Bus),.btnR(btnR),.in0(in0),.in1(in1),.in2(in2),.in3(in3));
-  Memory MEM(.CS(CS), .WE(WE), .CLK(CLK_2), .ADDR(ADDR), .Mem_Bus(Mem_Bus));
+  MIPS CPU(.CLK(CLK_3), .swi(swi),.RST(RST), .CS(CS), .WE(WE), .ADDR(ADDR), .Mem_Bus(Mem_Bus),.btnR(btnR),.in0(in0),.in1(in1),.in2(in2),.in3(in3));
+  Memory MEM(.CS(CS), .WE(WE), .CLK(CLK), .ADDR(ADDR), .Mem_Bus(Mem_Bus));
 
 endmodule
 
@@ -214,7 +213,7 @@ module REG(CLK, RegW, swi, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, R1);
 
   always @(posedge CLK)
   begin
-  R1 <= REG[8];
+  R1 <= REG[2];
   
     if(RegW == 1'b1)
       REG[DR] <= Reg_In[31:0];
@@ -306,7 +305,7 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
   hex_to_sseg c3(.x(Rout[3:0]),.r(in0));
   
   assign imm_ext = (instr[15] == 1)? {16'hFFFF, instr[15:0]} : {16'h0000, instr[15:0]};//Sign extend immediate field
-  assign dr = (format == R)? ((`opcode == rev || `opcode == rbit)? instr[25:21]:instr[15:11]) : ((format == J)? 5'd31:instr[20:16]); //Destination Register MUX (MUX1)
+  assign dr = (format == R)? ((opsave == rev || opsave == rbit)? instr[25:21]:instr[15:11]) : ((format == J)? 5'd31:instr[20:16]); //Destination Register MUX (MUX1)
   assign alu_in_A = readreg1;
   assign alu_in_B = (reg_or_imm_save)? imm_ext : readreg2; //ALU MUX (MUX2)
   assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX
