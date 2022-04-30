@@ -1,91 +1,119 @@
 `timescale 1ns / 1ps
-//module MIPS_Testbench ();
-//  reg CLK, CLK_2;
-//  reg RST;
-//  wire CS;
-//  wire WE;
-//  reg HALT;
-//  wire [31:0] Mem_Bus;
-//  wire [6:0] Address, Address_mux;
-//  reg [6:0] Address_TB;
-//  reg [31:0] expected [10:1];
-//  wire WE_mux, CS_mux;
-//  reg init, WE_TB, CS_TB;
-//  reg [2:0] swi;
-//  reg btnR;
-//  wire [3:0] an;
-//  wire [6:0] sseg;
-//  wire [6:0] in0, in1, in2, in3;
+module MIPS_Testbench ();
+  reg CLK, CLK_2;
+  reg RST;
+  wire CS;
+  wire WE;
+  reg HALT;
+  wire [31:0] Mem_Bus;
+  wire [6:0] Address, Address_mux;
+  reg [6:0] Address_TB;
+  reg [31:0] expected [10:1];
+  wire WE_mux, CS_mux;
+  reg init, WE_TB, CS_TB;
+  reg [2:0] swi;
+  reg btnR;
+  wire [3:0] an;
+  wire [6:0] sseg;
+  wire [6:0] in0, in1, in2, in3;
 
-//integer i;
-//  initial
-//  begin
-//    HALT = 0;
-//    CLK = 0;
-//    CLK_2 = 0;
-//    expected[1] = 32'h00000006;
-//    expected[2] = 32'h12;
-//    expected[3] = 32'h18;
-//    expected[4] = 32'hC;
-//    expected[5] = 32'h2;
-//    expected[6] = 32'h16;
-//    expected[7] = 32'h00000001;
-//    expected[8] = 32'h120;
-//    expected[9] = 32'h3;
-//    expected[10] = 32'h00412022;
+integer i;
+  initial
+  begin
+    HALT = 0;
+    CLK = 0;
+    CLK_2 = 0;
+    expected[1] = 32'h00000006;
+    expected[2] = 32'h12;
+    expected[3] = 32'h18;
+    expected[4] = 32'hC;
+    expected[5] = 32'h2;
+    expected[6] = 32'h16;
+    expected[7] = 32'h00000001;
+    expected[8] = 32'h120;
+    expected[9] = 32'h3;
+    expected[10] = 32'h00412022;
     
     
     
-//  end
+  end
 
-//assign Address_mux = (init)? Address_TB : Address;
-//assign WE_mux = (init)? WE_TB : WE;
-//assign CS_mux = (init)? CS_TB : CS;
+assign Address_mux = (init)? Address_TB : Address;
+assign WE_mux = (init)? WE_TB : WE;
+assign CS_mux = (init)? CS_TB : CS;
 
-//  dispFSM display(.CLK_2(CLK_2),.in0(in0),.in1(in1),.in2(in2),.in3(in3),.an(an),.sseg(sseg));
-//  MIPS CPU(.CLK(CLK), .swi(swi),.RST(RST), .CS(CS), .WE(WE), .ADDR(Address), .Mem_Bus(Mem_Bus),.in0(in0),.in1(in1),.in2(in2),.in3(in3));
-//  Memory MEM(.CS(CS_mux), .WE(WE_mux), .CLK(CLK), .ADDR(Address_mux), .Mem_Bus(Mem_Bus));
+  dispFSM display(.CLK_2(CLK_2),.in0(in0),.in1(in1),.in2(in2),.in3(in3),.an(an),.sseg(sseg));
+  MIPS CPU(.CLK(CLK), .swi(swi),.RST(RST), .CS(CS), .WE(WE), .ADDR(Address), .Mem_Bus(Mem_Bus),.btnR(btnR),.in0(in0),.in1(in1),.in2(in2),.in3(in3));
+  Memory MEM(.CS(CS_mux), .WE(WE_mux), .CLK(CLK), .ADDR(Address_mux), .Mem_Bus(Mem_Bus));
 
-//  always
-//  begin
-//    #5 CLK = !CLK;
-//    #10 CLK_2 = !CLK;
-//  end
+  always
+  begin
+    #5 CLK = !CLK;
+    #10 CLK_2 = !CLK;
+  end
 
-//  always
-//  begin
-//    RST = 1'b1; //reset the processor
-//    //Notice that the memory is initialize in the in the memory module not here
-//    @(posedge CLK);
-//    init <= 1;
-//    CS_TB <= 1;
-//    WE_TB <= 1;
-//    @(posedge CLK);
-//    CS_TB <= 0;
-//    WE_TB <= 0;
-//    init <= 0;
-//    @(posedge CLK);
-//    // driving reset low here puts processor in normal operating mode
-//    RST = 1'b0;
-//    btnR = 1'b0;
-//    swi = 3'b000;
-//    #300;
-//    swi = 3'b001;
-//    for(i = 1; i <= 10; i = i + 1) begin
-//    @(posedge WE);
-//    @(negedge CLK);
-//    if(Mem_Bus != expected[i])
-//    $display("Incorrect calculation: got %d, expected %d", Mem_Bus, expected[i]);
-//    end
-//    $display("TEST COMPLETE");
-//    $stop;
-//    /* add your testing code here */
-//    // you can add in a 'Halt' signal here as well to test Halt operation
-//    // you will be verifying your program operation using the
-//    // waveform viewer and/or self-checking operations
-//  end
+  always
+  begin
+  swi = 3'd1;
+    RST = 1'b1; //reset the processor
+    //Notice that the memory is initialize in the in the memory module not here
+    @(posedge CLK);
+    init <= 1;
+    CS_TB <= 1;
+    WE_TB <= 1;
+    @(posedge CLK);
+    CS_TB <= 0;
+    WE_TB <= 0;
+    init <= 0;
+    @(posedge CLK);
+    // driving reset low here puts processor in normal operating mode
+    RST = 1'b0;
+    btnR = 1'b0;
+    #500;
+    swi = 3'd0;
+    #1500;
+    btnR = 1'b1;
+    #500;
+    btnR = 1'b0;
+    swi = 3'd1;
+    #1500;
+    btnR = 1'b1;
+    #500;
+    btnR = 1'b0;
+    swi = 3'd2;
+    #1500;
+    btnR = 1'b1;
+    #500;
+    btnR = 1'b0;
+    swi = 3'd3;
+    #1500;
+    btnR = 1'b1;
+    #500;
+    btnR = 1'b0;
+    swi = 3'd4;
+    #1500;
+    btnR = 1'b1;
+    #500;
+    btnR = 1'b0;
+    swi = 3'd5;
+    #1500;
+    btnR = 1'b1;
+    #500;
+    for(i = 1; i <= 10; i = i + 1) begin
+    @(posedge WE);
+    @(negedge CLK);
+    if(Mem_Bus != expected[i])
+    $display("Incorrect calculation: got %d, expected %d", Mem_Bus, expected[i]);
+    end
+    $display("TEST COMPLETE");
+    $stop;
+    /* add your testing code here */
+    // you can add in a 'Halt' signal here as well to test Halt operation
+    // you will be verifying your program operation using the
+    // waveform viewer and/or self-checking operations
+  end
 
-//endmodule
+endmodule
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -161,7 +189,7 @@ endmodule
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-module REG(CLK, RegW, swi, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, R2, R3);
+module REG(CLK, RegW, swi, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, R1);
   input CLK;
   input RegW;
   input [2:0] swi;
@@ -171,7 +199,7 @@ module REG(CLK, RegW, swi, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, R2, R3);
   input [31:0] Reg_In;
   output reg [31:0] ReadReg1;
   output reg [31:0] ReadReg2;
-  output reg [31:0] R2, R3;
+  output reg [31:0] R1;
   reg [31:0] REG [0:31];
   integer i;
 
@@ -179,22 +207,23 @@ module REG(CLK, RegW, swi, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, R2, R3);
   for(i = 0; i <= 31; i = i + 1) begin
   REG[i] = 0;
   end
-    R2 = 0;
+    R1 = 0;
     ReadReg1 = 0;
     ReadReg2 = 0;
   end
 
   always @(posedge CLK)
   begin
-
+  R1 <= REG[8];
+  
     if(RegW == 1'b1)
       REG[DR] <= Reg_In[31:0];
-    else REG[1] <= swi[2:0];
-
+    else begin 
+    REG[1] <= swi[2:0];
+    end
     ReadReg1 <= REG[SR1];
     ReadReg2 <= REG[SR2];
-    R2 <= REG[2];
-    R3 <= REG[3];
+    
     
   end
 endmodule
@@ -221,7 +250,8 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
   inout [31:0] Mem_Bus;
   input btnR;
   output [6:0] in0, in1, in2, in3;
-  wire [31:0] R2, R3;
+  wire [31:0] R2;
+  reg [15:0] Rout;
 
   //special instructions (opcode == 000000), values of F code (bits 5-0):
   parameter add = 6'b100000;
@@ -266,20 +296,17 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
   reg fetchDorI;
   wire [4:0] dr;
   reg [2:0] state, nstate;
-  reg [15:0] rR2;
   reg [31:0] temp;
-  wire [31:0] Rout;
   integer loop;
 
   //combinational
-  
   hex_to_sseg c0(.x(Rout[15:12]),.r(in3));
   hex_to_sseg c1(.x(Rout[11:8]),.r(in2));
   hex_to_sseg c2(.x(Rout[7:4]),.r(in1));
   hex_to_sseg c3(.x(Rout[3:0]),.r(in0));
   
   assign imm_ext = (instr[15] == 1)? {16'hFFFF, instr[15:0]} : {16'h0000, instr[15:0]};//Sign extend immediate field
-  assign dr = (format == R)? instr[15:11] : ((format == J)? 5'd31:instr[20:16]); //Destination Register MUX (MUX1)
+  assign dr = (format == R)? ((`opcode == rev || `opcode == rbit)? instr[25:21]:instr[15:11]) : ((format == J)? 5'd31:instr[20:16]); //Destination Register MUX (MUX1)
   assign alu_in_A = readreg1;
   assign alu_in_B = (reg_or_imm_save)? imm_ext : readreg2; //ALU MUX (MUX2)
   assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX
@@ -288,7 +315,7 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
 
   //drive memory bus only during writes
   assign ADDR = (fetchDorI)? pc : alu_result_save[6:0]; //ADDR Mux
-  REG Register(CLK, regw, swi, dr, `sr1, `sr2, reg_in, readreg1, readreg2, R2, R3);
+  REG Register(CLK, regw, swi, dr, `sr1, `sr2, reg_in, readreg1, readreg2, R2);
 
   initial begin
 //  rR2 = 0;
@@ -385,8 +412,12 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
         alu_result[15:8] = alu_in_A[15:8] + alu_in_B[15:8];
         alu_result[7:0] = alu_in_A[7:0] + alu_in_B[7:0];
         end
-        else if (opsave == sadd) alu_result = ((alu_in_A + alu_in_B < alu_in_A) || (alu_in_A + alu_in_B > alu_in_A)) ? 32'hFFFFFFFF:(alu_in_A + alu_in_B); 
-        else if (opsave == ssub) alu_result = (alu_in_A - alu_in_B > alu_in_A) ? 32'h0:(alu_in_A - alu_in_B);
+        else if (opsave == sadd) begin
+        alu_result = ((alu_in_A + alu_in_B < alu_in_A) || (alu_in_A + alu_in_B < alu_in_B)) ? 32'hFFFFFFFF:(alu_in_A + alu_in_B);
+        end 
+        else if (opsave == ssub) begin
+        alu_result = (alu_in_A - alu_in_B > alu_in_A) ? 32'h0:(alu_in_A - alu_in_B);
+        end
         else if(opsave == jr && format == R) begin
           npc = alu_in_A[6:0];
           nstate = 3'd0;
@@ -400,7 +431,9 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
       end
       3: begin //prepare to write to mem
         nstate = 3'd0;
-        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)) regw = 1;
+        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)) begin
+        regw = 1;
+        end
         else if((format == J) && (instr[0])) regw = 1;
         else if (`opcode == sw) begin
           CS = 1;
@@ -421,10 +454,12 @@ module MIPS (CLK, swi, RST, CS, WE, ADDR, Mem_Bus, btnR, in0, in1, in2, in3);
   end //always
 
   always @(posedge CLK) begin
-    rR2 = Rout;
-    if(btnR) rR2[15:0] = Rout[31:16];
-    else rR2[15:0] = Rout[15:0];
-    
+    if(btnR) begin
+    Rout[15:0] = R2[31:16];
+    end
+    else begin
+    Rout[15:0] = R2[15:0];
+    end
     if (RST) begin
       state <= 3'd0;
       pc <= 7'd0;
